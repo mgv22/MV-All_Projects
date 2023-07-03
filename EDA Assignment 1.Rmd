@@ -1,0 +1,422 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+
+```{r}
+ames_df <- read_csv("~/Desktop/Graduate School/Supervised Learning/Module 1/ames_housing_data.csv", col_types = list("PoolQC" = col_character()))
+
+view(ames_df)
+head(ames_df)
+```
+
+```{r}
+names(ames_df)
+```
+
+
+```{r}
+ames_df$TotalSF <- ames_df$FirstFlrSF + ames_df$SecondFlrSF
+ames_df$HouseAge <- ames_df$YrSold - ames_df$YearBuilt
+ames_df$QualityIndex <- ames_df$OverallQual * ames_df$OverallCond
+ames_df$logSalePrice <- log(ames_df$SalePrice)
+ames_df$price_sqft <- ames_df$SalePrice / ames_df$TotalSF
+ames_df$RemodelFlag <-
+  if (ames_df$YearRemodel == ames_df$YearBuilt) {
+    "No"
+  } else {
+    "Yes"
+  }
+SummaryStats(price_sqft, data= ames_df)
+```
+
+
+```{r}
+par(mfrow= c(3,1))
+
+num_obs <- nrow(ames_df)
+num_obs
+table(ames_df$Zoning)
+summary(ames_df$SalePrice)
+summary(ames_df$SalePrice)
+BoxPlot(SalePrice, data=ames_df)
+moments::skewness(ames_df$SalePrice)
+moments::kurtosis(ames_df$SalePrice)
+SalePrice_Outliers <- boxplot.stats(ames_df$SalePrice, coef = 3.0)
+BoxPlot(GrLivArea, data=ames_df)
+```
+```{r}
+Histogram(SalePrice, data= ames_df)
+ggplot(ames_df, aes(x= GrLivArea, y= SalePrice)) +
+  geom_point(color= "red", shape= 1) +
+  ggtitle("Sale Price v. Above Ground Living Area") +
+  theme(plot.title = element_text(lineheight = 0.8, face= "bold", hjust = 0.5))+
+  geom_smooth(method= lm, se= FALSE)
+```
+```{r}
+    
+ggplot(ames_df, aes(x= TotalSF, y= QualityIndex)) + 
+  geom_point(color= " dark green", shape= 1)+
+  ggtitle("Total Floor Space v. QualityIndex")+
+  theme(plot.title = element_text(lineheight = 0.8, face= "bold", hjust = 0.5))
+
+ggplot(ames_df, aes(x= LotShape, y= HouseAge)) + 
+  geom_boxplot(fill= " dark green")+
+  ggtitle("Distribution of HouseAge")+
+  theme(plot.title = element_text(lineheight = 0.8, face= "bold", hjust = 0.5))
+
+```
+
+
+
+
+#SAMPLE AND WATERFALL DROP CONDITIONS
+
+```{r}
+# Subset the data; drop-out waterfall and 20 variables for EDA
+Vars_Chosen <- ames_df %>%
+  filter(
+    Zoning %in% c("RH", "RL", "RP", "RM", "FV"),
+    BldgType == "1Fam",
+    SaleCondition == "Normal",
+    GrLivArea < 4000
+  ) %>%
+  select(
+    SalePrice,
+    logSalePrice,
+    LotArea,
+    Neighborhood,
+    Condition1,
+    HouseStyle,
+    YearBuilt,
+    TotalSF,
+    price_sqft,
+    SubClass,
+    LotShape,
+    QualityIndex,
+    TotalBsmtSF,
+    CentralAir,
+    BedroomAbvGr,
+    TotRmsAbvGrd,
+    GarageType,
+    GarageCars,
+    LotConfig,
+    RemodelFlag,
+    HeatingQC
+  )
+
+Numeric_Vars_Chose<- Vars_Chosen %>%
+  select(
+    SalePrice,
+    logSalePrice,
+    LotArea,
+    TotalSF,
+    QualityIndex,
+    TotalBsmtSF,
+    BedroomAbvGr,
+    TotRmsAbvGrd,
+    GarageCars)
+
+ggplot(Vars_Chosen, aes(x= TotalSF, y= SalePrice)) +
+  geom_point(color= "dark green", shape= 1) +
+  ggtitle("Sale Price v. Total Floor Space") +
+  theme(plot.title = element_text(lineheight = 0.8, face= "bold", hjust = 0.5))+
+  geom_smooth(method= lm, se= FALSE)
+
+ggplot(Vars_Chosen, aes(x= QualityIndex, y= SalePrice)) +
+  geom_point(color= "red", shape= 1) +
+  ggtitle("Sale Price v. QualityIndex") +
+  theme(plot.title = element_text(lineheight = 0.8, face= "bold", hjust = 0.5))
+
+
+ggplot(Vars_Chosen, aes(x= LotShape, y= SalePrice)) +
+  geom_boxplot(fill= "blue") +
+  ggtitle("Sale Price v. Lot Shape") +
+  theme(plot.title = element_text(lineheight = 0.8, face= "bold", hjust = 0.5))
+
+VarsCor<- cor(Numeric_Vars_Chose)
+corrplot(VarsCor, method= "shade", shade.col= NA, tl.col= "black")
+
+summary(Numeric_Vars_Chose)
+
+```
+
+
+
+
+
+```{r}
+# Create waterfall of observations filtered out
+DataZone <- ames_df %>%
+  filter(Zoning %in% c("RH", "RL", "RP", "RM", "FV"))
+
+ZoneBldg <- DataZone %>%
+  filter(BldgType == "1Fam")
+
+ZonBldgSalcon <- ZoneBldg %>%
+  filter(SaleCondition == "Normal")
+
+ZonBldgSalLiv <- ZonBldgSalcon %>%
+  filter(GrLivArea <= 4000)
+
+
+# Drop Condition Table
+
+Dropped <- tibble(
+  DropCondition = c(
+    "Non-Residential Zoning",
+    "Multi-Family Homes",
+    "Non-Normal Sale Condition",
+    "Data Documentation Preferred Exclusions"
+  ),
+  ObservationsDropped = c(
+    num_obs - nrow(DataZone),
+    nrow(DataZone) - nrow(ZoneBldg),
+    nrow(ZoneBldg) - nrow(ZonBldgSalcon),
+    nrow(ZonBldgSalcon) - nrow(ZonBldgSalLiv)
+  ),
+  RemainingObservations = c(nrow(DataZone),
+                            nrow(ZoneBldg),
+                            nrow(ZonBldgSalcon),
+                            nrow(ZonBldgSalLiv))
+)
+
+Dropped
+table(ames_df$SaleCondition)
+
+```
+
+#Data Quality Check
+
+```{r}
+
+
+SummaryFunc <- function(x) {
+  c(
+    "Stand dev" = sd(x, na.rm = TRUE),
+    "Mean" = mean(x, na.rm = TRUE),
+    "Median" = median(x),
+    "Minimum" = min(x, na.rm = TRUE),
+    "Maximun" = max(x, na.rm = TRUE)
+  )
+}
+
+
+Sum_Numeric_df <- Vars_Chosen %>%
+  select_if(is.numeric) %>%
+  map( ~ SummaryFunc(.)) %>%
+  as.data.frame()
+
+Numeric_Rows<- row.names(Sum_Numeric_df)
+Sum_Numeric_df <- cbind(Sum_Numeric_df, Numeric_Rows) %>%
+  gather(key = key, value = value, -Numeric_Rows) %>%
+  spread(key = Numeric_Rows, value = value)
+
+Sum_Numeric_df
+```
+# Initial EDA
+
+```{r}
+#Sale Price
+summary(Vars_Chosen$SalePrice)
+sd(Vars_Chosen$SalePrice)
+
+par(mfrow=c(1,2))
+boxplot(Vars_Chosen$logSalePrice, horizontal = TRUE, col = "dark green", xlab = "Log Sale Price", main = "Log Sale Price")
+hist(Vars_Chosen$logSalePrice,
+     main = "Log Sale Price",
+     xlab = "Log Sale Price",
+     col = "orange")
+moments::skewness(Vars_Chosen$logSalePrice)
+boxplot.stats(Vars_Chosen$SalePrice, coef = 3.0)
+sum(is.na(Vars_Chosen$SalePrice))
+```
+
+
+```{r}
+# Lot Area
+
+boxplot(Vars_Chosen$LotArea, horizontal = TRUE)
+length(boxplot.stats(Vars_Chosen$LotArea, coef = 3.0)$out)
+sum(is.na(Vars_Chosen$LotArea))
+```
+
+
+```{r}
+#Neighborhood
+summary(Vars_Chosen$Neighborhood)
+table(Vars_Chosen$Neighborhood)
+
+```
+
+
+
+ 
+```{r}
+#QualityIndex
+
+summary(Vars_Chosen$QualityIndex)
+sum(is.na(Vars_Chosen$QualityIndex))
+Vars_Chosen %>%
+  ggplot(aes(x = QualityIndex)) +
+  geom_bar(fill = "orange") +
+  ggtitle("Quality Index Volume") +
+  theme_classic()
+
+pnorm(
+  25,
+  mean = mean(Vars_Chosen$QualityIndex),
+  sd = sd(Vars_Chosen$QualityIndex)
+)
+pnorm(
+  50,
+  mean = mean(Vars_Chosen$QualityIndex),
+  sd = sd(Vars_Chosen$QualityIndex)
+) - pnorm(
+  25,
+    mean = mean(Vars_Chosen$QualityIndex),
+  sd = sd(Vars_Chosen$QualityIndex)
+)
+```
+ 
+ 
+ 
+```{r}
+#House Style
+
+table(Vars_Chosen$HouseStyle)
+sum(is.na(Vars_Chosen$HouseStyle))
+```
+ 
+ 
+ 
+ 
+ 
+```{r}
+#Year Built
+
+summary(Vars_Chosen$YearBuilt)
+quantile(Vars_Chosen$YearBuilt)
+Vars_Chosen %>%
+  ggplot(aes(x = YearBuilt)) +
+  geom_bar(fill = "green") +
+  ggtitle("Year Built") +
+  theme_classic()
+``` 
+ 
+
+
+
+
+
+```{r}
+#Total Square Feet
+summary(Vars_Chosen$TotalSF)
+sd(Vars_Chosen$TotalSF)
+boxplot(Vars_Chosen$TotalSF, coef = 3.0, horizontal = TRUE)
+length(boxplot.stats(Vars_Chosen$TotalSF, coef = 3.0)$out)
+
+par(mfrow=c(1,2))
+boxplot(Vars_Chosen$TotalSF, horizontal = TRUE, col = "blue", xlab = "Total Square Feet", main = "Total Square Feet")
+hist(Vars_Chosen$TotalSF,
+     main = "Total Square Feet",
+     xlab = "Total Square Feet",
+     col = "orange")
+moments::skewness(Vars_Chosen$TotalSF)
+
+```
+
+
+```{r}
+#Price per Square Foot
+par(mfrow=c(1,2))
+boxplot(Vars_Chosen$price_sqft, horizontal = TRUE, col = "red", xlab = "Price per Square Foot", main = "Price per Square Foot")
+hist(Vars_Chosen$price_sqft,
+     main = "Price per Square Foot",
+     xlab = "Price per Square Foot",
+     col = "orange")
+moments::skewness(Vars_Chosen$price_sqft)
+
+```
+
+
+```{r}
+#Total Rooms Above Ground
+summary(subset_df$TotRmsAbvGrd)
+
+```
+
+
+
+```{r}
+# Subclass
+table(Vars_Chosen$SubClass)
+Vars_Chosen %>%
+  ggplot(aes(x = SubClass)) +
+  geom_bar(fill = "blue") +
+  coord_flip() +
+  ggtitle("Sub-Class Volumes") +
+  theme_classic()
+
+```
+```{r}
+#Condition 1
+
+table(ames_df$Condition1)
+Vars_Chosen %>%
+  ggplot(aes(x = Condition1)) +
+  geom_bar(fill = "purple") +
+  coord_flip() +
+  ggtitle("Proximity Conditions") +
+  theme_classic()
+```
+
+
+#Initial Data Anlaysis for Modeling
+
+```{r}
+# Sales vs year built
+Vars_Chosen %>%
+  ggplot(aes(x = YearBuilt, y = SalePrice)) +
+  geom_point()
+
+ggplot(Vars_Chosen, aes(x= QualityIndex, y= SalePrice)) +
+  geom_point(color= "dark green", shape= 1) +
+  ggtitle("Quality Index v. Total Floor Space") +
+  theme(plot.title = element_text(lineheight = 0.8, face= "bold", hjust = 0.5))+
+
+
+plot(x = Vars_Chosen$QualityIndex, y = Vars_Chosen$logSalePrice, col = "blue",
+     main = "Quality Index  vs Log Sales Price",
+     xlab = "Quality Index ",
+     ylab = "Log Sales Price")
+
+ggplot(Vars_Chosen, aes(x= TotalSF, y= SalePrice)) +
+  geom_point(color= "dark green", shape= 1) +
+  ggtitle("Sale Price v. Total Floor Space") +
+  theme(plot.title = element_text(lineheight = 0.8, face= "bold", hjust = 0.5))+
+  geom_smooth(method= lm, se= FALSE)
+
+ggplot(Vars_Chosen, aes(x= price_sqft, y= SalePrice)) +
+  geom_point(color= "red", shape= 1) +
+  ggtitle("Sale Price v. Price per Square Foot") +
+  theme(plot.title = element_text(lineheight = 0.8, face= "bold", hjust = 0.5))+
+  geom_smooth(method= lm, se= FALSE)
+
+#Correlation Coefficient
+
+cor(subset_df$QualityIndex, y = subset_df$logSalePrice)
+
+
+
+
+```
+
+
+
+
