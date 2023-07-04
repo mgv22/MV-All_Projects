@@ -1,0 +1,226 @@
+---
+title: "Team Ball Movement Viz"
+output: html_document
+date: "2023-07-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r cars}
+library(tidyverse)
+library(ggimage)
+library(gt)
+library(nflfastR)
+library(readr)
+library(scales)
+library(ggimage)
+```
+
+
+```{r}
+#Read in Sheets
+Good_on_1st <- read_csv("C:/Users/mgven/OneDrive/Desktop/PFF/Viz/Moving the Chains/Good on 1st.csv")
+Good_on_1st$On_Schedule_Percentage<- as.numeric(sub("%","",Good_on_1st$On_Schedule_Percentage))
+Good_on_1st <- Good_on_1st %>%
+  mutate(rank = row_number())
+
+On_Sched_2nd <- read_csv("C:/Users/mgven/OneDrive/Desktop/PFF/Viz/Moving the Chains/On Schedule 2nd.csv")
+On_Sched_2nd$On_Schedule_Percentage<- as.numeric(sub("%","",On_Sched_2nd$On_Schedule_Percentage))
+On_Sched_2nd <- On_Sched_2nd %>%
+  mutate(rank = row_number())
+
+Convert_3rd <- read_csv("C:/Users/mgven/OneDrive/Desktop/PFF/Viz/Moving the Chains/3rd Down Conversion.csv")
+Convert_3rd$Conversion_Percentage<- as.numeric(sub("%","",Convert_3rd$Conversion_Percentage))
+Convert_3rd <- Convert_3rd %>%
+  mutate(rank = row_number())
+```
+
+```{r}
+teams <- nflreadr::load_teams(current = TRUE)
+
+teams <- teams %>%
+  mutate(team_abbr = case_when(
+      team_abbr == "ARI" ~ "ARZ",
+      team_abbr == "BAL" ~ "BLT",
+      team_abbr == "CLE" ~ "CLV",
+      team_abbr == "HOU" ~ "HST",
+      TRUE ~ team_abbr
+    )) %>%
+  ungroup()
+
+```
+
+
+
+```{r}
+Good_on_1st<- Good_on_1st %>%
+  left_join(teams, by = c("pff_OFFTEAM" = "team_abbr"))
+
+On_Sched_2nd<- On_Sched_2nd %>%
+  left_join(teams, by = c("pff_OFFTEAM" = "team_abbr"))
+
+Convert_3rd<- Convert_3rd %>%
+  left_join(teams, by = c("pff_OFFTEAM" = "team_abbr"))
+
+
+```
+
+
+
+```{r pressure, echo=FALSE}
+Good_on_1st %>%
+  select(rank, logo = team_logo_espn ,pff_OFFTEAM, On_Schedule_Count, On_Schedule_Percentage) %>%
+  gt() %>%
+  text_transform(
+  locations = cells_body(vars(logo)),
+  fn = function(x){
+    web_image(
+      url = x,
+      height = px(20)
+      )
+    }
+  ) %>% 
+  cols_label(    rank = "Rank",
+    logo = "Logo",pff_OFFTEAM = "Offense",
+             On_Schedule_Count = "Opportunities",
+             On_Schedule_Percentage = "First Down On Schedule Rate") %>%
+  cols_align(align = "center") %>%
+  data_color(
+    columns = c(On_Schedule_Percentage),
+    colors = scales::col_numeric(
+      palette = c("viridis"), domain = NULL)) %>%
+  tab_header(title = "Offenses That Made the Most of Their 1st Downs") %>%
+  tab_style(
+    style = cell_text(color= "black", weight = "bold", align = "left"),
+    locations = cells_title("title")
+  )
+
+```
+
+
+
+
+
+
+
+
+```{r pressure, echo=FALSE}
+On_Sched_2nd %>%
+  select(rank, logo = team_logo_espn ,pff_OFFTEAM, On_Schedule_Count, On_Schedule_Percentage) %>%
+  gt() %>%
+  text_transform(
+  locations = cells_body(vars(logo)),
+  fn = function(x){
+    web_image(
+      url = x,
+      height = px(20)
+      )
+    }
+  ) %>% 
+  cols_label(
+    rank = "Rank",
+    logo = "Logo",pff_OFFTEAM = "Offense",
+             On_Schedule_Count = "Opportunities",
+             On_Schedule_Percentage = "Chains Moving On Schedule Rate") %>%
+  cols_align(align = "center") %>%
+  data_color(
+    columns = c(On_Schedule_Percentage),
+    colors = scales::col_numeric(
+      palette = c("viridis"), domain = NULL)) %>%
+  tab_header(title = "Offenses That Stayed on Schedule on 2nd Down") %>%
+  tab_style(
+    style = cell_text(color= "black", weight = "bold", align = "left"),
+    locations = cells_title("title")
+  )
+
+
+```
+
+
+```{r}
+Convert_3rd %>%
+  select(rank, logo = team_logo_espn ,pff_OFFTEAM, Conversion_Opps, Conversion_Percentage) %>%
+  gt() %>% 
+  text_transform(
+  locations = cells_body(vars(logo)),
+  fn = function(x){
+    web_image(
+      url = x,
+      height = px(20)
+      )
+    }
+  ) %>% 
+  cols_label(    rank = "Rank",
+    logo = "Logo",pff_OFFTEAM = "Offense",
+             Conversion_Opps = "Opportunities",
+             Conversion_Percentage = "Conversion %") %>%
+  cols_align(align = "center") %>%
+  data_color(
+    columns = c(Conversion_Percentage),
+    colors = scales::col_numeric(
+      palette = c("viridis"), domain = NULL)) %>%
+  tab_header(title = "Offenses Moving the Chains on 3rd Down") %>%
+  tab_style(
+    style = cell_text(color= "black", weight = "bold", align = "left"),
+    locations = cells_title("title")
+  )   
+  
+
+```
+    
+    
+    
+    ```{r}
+    #Read in Sheets
+Good_on_1st <- read_csv("C:/Users/mgven/OneDrive/Desktop/PFF/Viz/Moving the Chains/Good on 1st.csv")
+Good_on_1st$On_Schedule_Percentage<- as.numeric(sub("%","",Good_on_1st$On_Schedule_Percentage))
+
+
+On_Sched_2nd <- read_csv("C:/Users/mgven/OneDrive/Desktop/PFF/Viz/Moving the Chains/On Schedule 2nd.csv")
+On_Sched_2nd$On_Schedule_Percentage<- as.numeric(sub("%","",On_Sched_2nd$On_Schedule_Percentage))
+
+
+Convert_3rd <- read_csv("C:/Users/mgven/OneDrive/Desktop/PFF/Viz/Moving the Chains/3rd Down Conversion.csv")
+Convert_3rd$Conversion_Percentage<- as.numeric(sub("%","",Convert_3rd$Conversion_Percentage))
+
+
+```
+
+
+```{r}
+teams <- nflreadr::load_teams(current = TRUE)
+
+teams <- teams %>%
+  mutate(team_abbr = case_when(
+      team_abbr == "ARI" ~ "ARZ",
+      team_abbr == "BAL" ~ "BLT",
+      team_abbr == "CLE" ~ "CLV",
+      team_abbr == "HOU" ~ "HST",
+      TRUE ~ team_abbr
+    )) %>%
+  ungroup()
+
+```
+
+
+```{r}
+    
+All <- full_join(Good_on_1st, On_Sched_2nd, by="pff_OFFTEAM") %>% left_join(., Convert_3rd, by="pff_OFFTEAM") %>%
+  left_join(teams, by = c("pff_OFFTEAM" = "team_abbr"))
+    
+All <- All%>%
+  mutate(rank = row_number())
+    
+    ```
+    
+
+
+
+    
+    
+    
+    

@@ -1,0 +1,147 @@
+---
+title: "MOF Viz"
+output: html_document
+date: "2023-07-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(ggimage)
+library(gt)
+library(nflfastR)
+library(readr)
+library(scales)
+library(ggimage)
+library(ggthemes)
+library(ggtext)
+```
+
+
+```{r}
+MOF_data <- read_csv("C:/Users/mgven/OneDrive/Desktop/PFF/Viz/MOF/MOF.csv")
+MOF_data$SHOWN_NOT_PLAYED_RATE<- as.numeric(sub("%","",MOF_data$SHOWN_NOT_PLAYED_RATE))/100
+MOF_data$SHOWN_PLAYED_RATE<- as.numeric(sub("%","",MOF_data$SHOWN_PLAYED_RATE))/100
+MOF_data$SHOWN_NOT_PLAYED_PBU_RATE<- as.numeric(sub("%","",MOF_data$SHOWN_NOT_PLAYED_PBU_RATE))/100
+MOF_data$SHOWN_PLAYED_PBU_RATE<- as.numeric(sub("%","",MOF_data$SHOWN_PLAYED_PBU_RATE))/100
+MOF_data$SHOWN_NOT_PLAYED_INT_RATE<- as.numeric(sub("%","",MOF_data$SHOWN_NOT_PLAYED_INT_RATE))/100
+MOF_data$SHOWN_PLAYED_INT_RATE<- as.numeric(sub("%","",MOF_data$SHOWN_PLAYED_INT_RATE))/100
+    
+```
+
+
+
+```{r}
+teams <- nflreadr::load_teams(current = TRUE)
+
+teams <- teams %>%
+  mutate(team_abbr = case_when(
+      team_abbr == "ARI" ~ "ARZ",
+      team_abbr == "BAL" ~ "BLT",
+      team_abbr == "CLE" ~ "CLV",
+      team_abbr == "HOU" ~ "HST",
+      TRUE ~ team_abbr
+    )) %>%
+  ungroup()
+
+```
+
+
+
+```{r}
+MOF_data<- MOF_data %>%
+  left_join(teams, by = c("pff_DEFTEAM" = "team_abbr"))
+
+
+
+
+```
+
+
+```{r}
+nfl_analytics_theme <- function(..., base_size = 12) {
+  
+  theme(
+    text = element_text(family = "Helvetica",
+                        size = base_size,
+                        color = "black"),
+    axis.ticks = element_blank(),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.title = element_markdown(size = 16,
+                                  vjust = .02,
+                                  hjust = 0.5),
+    plot.subtitle = element_markdown(hjust = 0.5),
+    plot.caption = element_markdown(size = 8),
+    panel.grid.minor = element_blank(),
+    panel.grid.major =  element_line(color = "#d0d0d0"),
+    panel.background = element_rect(fill = "#f7f7f7"),
+    plot.background = element_rect(fill = "#f7f7f7"),
+    panel.border = element_blank(),
+    legend.background = element_rect(color = "#F7F7F7"),
+    legend.key = element_rect(color = "#F7F7F7"),
+    legend.title = element_text(face = "bold"),
+    legend.title.align = 0.5,
+    strip.text = element_text(face = "bold"))
+}
+
+```
+
+
+```{r}
+ggplot(data = MOF_data, aes(x = SHOWN_NOT_PLAYED_RATE, y = SHOWN_NOT_PLAYED_EPA)) +
+  geom_hline(yintercept = mean(MOF_data$SHOWN_NOT_PLAYED_EPA), 
+             linewidth = 0.8, 
+             color = "black", 
+             linetype = "dashed") +
+  geom_vline(xintercept = mean(MOF_data$SHOWN_NOT_PLAYED_RATE), 
+             linewidth = 0.8, 
+             color = "black", 
+             linetype = "dashed") +
+  geom_image(aes(image = MOF_data$team_logo_espn), asp = 16/9) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 6),
+                     labels = percent) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 6),
+                     labels = scales::label_comma()) +
+  labs(title = "**MOF Shown and Not Played EPA 2022**",
+       subtitle = "*2022 NFL Season*",
+       caption = "*Data: PFF*<br>
+       **Twitter: @M_G_V22**",
+       x = "Shown Not Played Rate",
+       y = "EPA") +
+  nfl_analytics_theme()
+
+```
+
+
+
+
+```{r}
+ggplot(data = MOF_data, aes(x = SHOWN_PLAYED_RATE, y = SHOWN_PLAYED_EPA)) +
+  geom_hline(yintercept = mean(MOF_data$SHOWN_PLAYED_EPA), 
+             linewidth = 0.8, 
+             color = "black", 
+             linetype = "dashed") +
+  geom_vline(xintercept = mean(MOF_data$SHOWN_PLAYED_RATE), 
+             linewidth = 0.8, 
+             color = "black", 
+             linetype = "dashed") +
+  geom_image(aes(image = MOF_data$team_logo_espn), asp = 16/9) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 6),
+                     labels = percent) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 6),
+                     labels = scales::label_comma()) +
+  labs(title = "**MOF Shown and Played EPA 2022**",
+       subtitle = "*2022 NFL Season*",
+       caption = "*Data: PFF*<br>
+       **Twitter: @M_G_V22**",
+       x = "Shown Played Rate",
+       y = "EPA") +
+  nfl_analytics_theme()
+```
+
